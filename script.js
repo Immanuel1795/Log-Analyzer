@@ -3,7 +3,9 @@
 // ===============================
 
 // DOM Elements
-const logInput = document.getElementById("logInput");
+const logFile = document.getElementById("logFile");
+const selectedFile = document.getElementById("selectedFile");
+
 const analyzeButton = document.getElementById("analyzeButton");
 const clearButton = document.getElementById("clearButton");
 
@@ -16,12 +18,44 @@ const failedCountEl = document.getElementById("failedCount");
 
 
 // ===============================
+// GLOBAL STATE
+// ===============================
+
+let logText = "";
+
+
+// ===============================
+// FILE UPLOAD HANDLER
+// ===============================
+
+logFile.addEventListener("change", function () {
+
+    const file = this.files[0];
+
+    if (!file) return;
+
+    selectedFile.textContent = file.name;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        logText = e.target.result;
+    };
+
+    reader.readAsText(file);
+});
+
+
+// ===============================
 // EVENTS
 // ===============================
 
 analyzeButton.addEventListener("click", function () {
 
-    const logText = logInput.value;
+    if (!logText) {
+        alert("Please select a log file first.");
+        return;
+    }
 
     const exports = parseLog(logText);
 
@@ -35,9 +69,17 @@ analyzeButton.addEventListener("click", function () {
 
 clearButton.addEventListener("click", function () {
 
-    logInput.value = "";
+    logFile.value = "";
+    logText = "";
+    selectedFile.textContent = "No file selected";
 
-    resultsBody.innerHTML = "";
+    resultsBody.innerHTML = `
+        <tr>
+            <td colspan="7" class="empty">
+                Upload a log file and click Analyze.
+            </td>
+        </tr>
+    `;
 
     totalExportsEl.textContent = "0";
     successCountEl.textContent = "0";
@@ -47,7 +89,7 @@ clearButton.addEventListener("click", function () {
 
 
 // ===============================
-// PARSER (UPDATED FOR ALL LOG TYPES)
+// PARSER (ROBUST VERSION)
 // ===============================
 
 function parseLog(logText) {
@@ -60,20 +102,14 @@ function parseLog(logText) {
 
     for (let rawLine of lines) {
 
-        // ===============================
-        // REMOVE TIMESTAMP (NEW FIX)
-        // ===============================
+        // Remove timestamps (2025-03-27T03:31:14Z ...)
         let line = rawLine.replace(/^\d{4}-\d{2}-\d{2}T.*?\s+/, "");
 
-        // ===============================
-        // IGNORE NOISE LINES
-        // ===============================
+        // Ignore noise
         if (line.includes("uploading Blob")) continue;
         if (line.includes("uploading done")) continue;
 
-        // ===============================
-        // DETECT EXPORT START
-        // ===============================
+        // Detect export section start
         if (line.includes("---------------------------")) {
 
             const match = line.match(/---------------------------\s+(.+?)\s+\(/);
@@ -97,25 +133,25 @@ function parseLog(logText) {
 
         if (!currentExport) continue;
 
-        // ===============================
         // TABLE + DECLARED ROWS
-        // ===============================
         if (line.includes("TABLE=")) {
 
             const tableMatch = line.match(/TABLE=([^;]+)/);
             if (tableMatch) currentExport.table = tableMatch[1];
 
             const declaredMatch = line.match(/DECLARED_ROWS=(\d+)/);
-            if (declaredMatch) currentExport.declaredRows = parseInt(declaredMatch[1]);
+            if (declaredMatch) {
+                currentExport.declaredRows = parseInt(declaredMatch[1]);
+            }
         }
 
-        // ===============================
         // PORTION DATA
-        // ===============================
         if (line.includes("PORTION=")) {
 
             const portionMatch = line.match(/PORTION=(\d+)/);
-            if (portionMatch) currentExport.portions = parseInt(portionMatch[1]);
+            if (portionMatch) {
+                currentExport.portions = parseInt(portionMatch[1]);
+            }
 
             const receivedMatch = line.match(/RECEIVED=(\d+)/);
             if (receivedMatch) {
@@ -123,12 +159,12 @@ function parseLog(logText) {
             }
 
             const leftMatch = line.match(/LEFT=(-?\d+)/);
-            if (leftMatch) currentExport.leftRows = parseInt(leftMatch[1]);
+            if (leftMatch) {
+                currentExport.leftRows = parseInt(leftMatch[1]);
+            }
         }
 
-        // ===============================
         // COMPLETION DETECTION
-        // ===============================
         if (line.includes("loading of") && line.includes("is done")) {
             currentExport.completed = true;
         }
@@ -139,7 +175,7 @@ function parseLog(logText) {
 
 
 // ===============================
-// ANALYSIS ENGINE (FINAL RULES)
+// ANALYSIS ENGINE
 // ===============================
 
 function analyzeExports(exports) {
@@ -204,7 +240,7 @@ function analyzeExports(exports) {
         }
 
         // ===============================
-        // LEFT > 0 → FAILED
+        // LEFT > 0 → FAILED (IMPORTANT RULE)
         // ===============================
         if (exp.leftRows > 0) {
             exp.status = "Failed";
@@ -238,15 +274,19 @@ function renderTable(data) {
     resultsBody.innerHTML = "";
 
     if (!data.exports.length) {
+
         resultsBody.innerHTML = `
             <tr>
-                <td colspan="7" class="empty">No exports found</td>
+                <td colspan="7" class="empty">
+                    No exports found
+                </td>
             </tr>
         `;
+
         return;
     }
 
-    for (let exp of data.exports) {
+    for (const exp of data.exports) {
 
         const row = document.createElement("tr");
 
