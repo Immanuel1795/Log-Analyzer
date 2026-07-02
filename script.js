@@ -1,8 +1,7 @@
 // ===============================
-// ServiceNow Log Analyzer (FINAL)
+// STATE
 // ===============================
 
-// DOM Elements
 const logFile = document.getElementById("logFile");
 const selectedFile = document.getElementById("selectedFile");
 
@@ -16,30 +15,37 @@ const successCountEl = document.getElementById("successCount");
 const warningCountEl = document.getElementById("warningCount");
 const failedCountEl = document.getElementById("failedCount");
 
-
-// ===============================
-// GLOBAL STATE
-// ===============================
-
 let logText = "";
+let fileReady = false;
 
 
 // ===============================
-// FILE UPLOAD HANDLER
+// FILE UPLOAD
 // ===============================
 
 logFile.addEventListener("change", function () {
 
     const file = this.files[0];
 
-    if (!file) return;
+    if (!file) {
+        selectedFile.textContent = "No file selected";
+        logText = "";
+        fileReady = false;
+        analyzeButton.disabled = true;
+        return;
+    }
 
-    selectedFile.textContent = file.name;
+    selectedFile.textContent = `Loading: ${file.name}...`;
+    analyzeButton.disabled = true;
 
     const reader = new FileReader();
 
     reader.onload = function (e) {
         logText = e.target.result;
+        fileReady = true;
+
+        selectedFile.textContent = `Selected: ${file.name}`;
+        analyzeButton.disabled = false;
     };
 
     reader.readAsText(file);
@@ -47,76 +53,71 @@ logFile.addEventListener("change", function () {
 
 
 // ===============================
-// EVENTS
+// ANALYZE
 // ===============================
 
 analyzeButton.addEventListener("click", function () {
 
-    if (!logText) {
-        alert("Please select a log file first.");
+    if (!fileReady || !logText) {
+        alert("File not ready yet.");
         return;
     }
 
     const exports = parseLog(logText);
+    const result = analyzeExports(exports);
 
-    const analyzed = analyzeExports(exports);
-
-    renderTable(analyzed);
-
-    updateSummary(analyzed);
+    renderTable(result);
+    updateSummary(result);
 });
 
+
+// ===============================
+// CLEAR
+// ===============================
 
 clearButton.addEventListener("click", function () {
 
     logFile.value = "";
     logText = "";
+    fileReady = false;
+
     selectedFile.textContent = "No file selected";
+    analyzeButton.disabled = true;
 
     resultsBody.innerHTML = `
-        <tr>
-            <td colspan="7" class="empty">
-                Upload a log file and click Analyze.
-            </td>
-        </tr>
+        <tr><td colspan="7" class="empty">Upload a file to start</td></tr>
     `;
 
-    totalExportsEl.textContent = "0";
-    successCountEl.textContent = "0";
-    warningCountEl.textContent = "0";
-    failedCountEl.textContent = "0";
+    totalExportsEl.textContent = 0;
+    successCountEl.textContent = 0;
+    warningCountEl.textContent = 0;
+    failedCountEl.textContent = 0;
 });
 
 
 // ===============================
-// PARSER (ROBUST VERSION)
+// PARSER
 // ===============================
 
 function parseLog(logText) {
 
     const lines = logText.split("\n");
-
     const exports = [];
+    let current = null;
 
-    let currentExport = null;
+    for (let raw of lines) {
 
-    for (let rawLine of lines) {
+        let line = raw.replace(/^\d{4}-\d{2}-\d{2}T.*?\s+/, "");
 
-        // Remove timestamps (2025-03-27T03:31:14Z ...)
-        let line = rawLine.replace(/^\d{4}-\d{2}-\d{2}T.*?\s+/, "");
-
-        // Ignore noise
         if (line.includes("uploading Blob")) continue;
         if (line.includes("uploading done")) continue;
 
-        // Detect export section start
         if (line.includes("---------------------------")) {
 
             const match = line.match(/---------------------------\s+(.+?)\s+\(/);
 
             if (match) {
-
-                currentExport = {
+                current = {
                     name: match[1],
                     table: "",
                     declaredRows: 0,
@@ -126,47 +127,35 @@ function parseLog(logText) {
                     completed: false,
                     status: "Unknown"
                 };
-
-                exports.push(currentExport);
+                exports.push(current);
             }
         }
 
-        if (!currentExport) continue;
+        if (!current) continue;
 
-        // TABLE + DECLARED ROWS
         if (line.includes("TABLE=")) {
-
-            const tableMatch = line.match(/TABLE=([^;]+)/);
-            if (tableMatch) currentExport.table = tableMatch[1];
-
-            const declaredMatch = line.match(/DECLARED_ROWS=(\d+)/);
-            if (declaredMatch) {
-                currentExport.declaredRows = parseInt(declaredMatch[1]);
-            }
+            const m = line.match(/TABLE=([^;]+)/);
+            if (m) current.table = m[1];
         }
 
-        // PORTION DATA
+        if (line.includes("DECLARED_ROWS=")) {
+            const m = line.match(/DECLARED_ROWS=(\d+)/);
+            if (m) current.declaredRows = +m[1];
+        }
+
         if (line.includes("PORTION=")) {
+            const m = line.match(/PORTION=(\d+)/);
+            if (m) current.portions = +m[1];
 
-            const portionMatch = line.match(/PORTION=(\d+)/);
-            if (portionMatch) {
-                currentExport.portions = parseInt(portionMatch[1]);
-            }
+            const r = line.match(/RECEIVED=(\d+)/);
+            if (r) current.receivedRows += +r[1];
 
-            const receivedMatch = line.match(/RECEIVED=(\d+)/);
-            if (receivedMatch) {
-                currentExport.receivedRows += parseInt(receivedMatch[1]);
-            }
-
-            const leftMatch = line.match(/LEFT=(-?\d+)/);
-            if (leftMatch) {
-                currentExport.leftRows = parseInt(leftMatch[1]);
-            }
+            const l = line.match(/LEFT=(-?\d+)/);
+            if (l) current.leftRows = +l[1];
         }
 
-        // COMPLETION DETECTION
         if (line.includes("loading of") && line.includes("is done")) {
-            currentExport.completed = true;
+            current.completed = true;
         }
     }
 
@@ -175,82 +164,45 @@ function parseLog(logText) {
 
 
 // ===============================
-// ANALYSIS ENGINE
+// ANALYSIS
 // ===============================
 
 function analyzeExports(exports) {
 
-    let success = 0;
-    let warning = 0;
-    let failed = 0;
+    let success = 0, warning = 0, failed = 0;
 
-    for (const exp of exports) {
+    for (let e of exports) {
 
-        // ===============================
-        // SERVICE_COMMITMENT SPECIAL CASE
-        // ===============================
-        if (exp.name && exp.name.includes("SERVICE_COMMITMENT")) {
-
-            if (exp.leftRows === 0) {
-                exp.status = "Success";
-                success++;
-            } else {
-                exp.status = "Warning";
-                warning++;
-            }
-
-            continue;
+        if (e.name.includes("SERVICE_COMMITMENT")) {
+            e.status = (e.leftRows === 0) ? "Success" : "Warning";
         }
 
-        // ===============================
-        // NOT COMPLETED → FAILED
-        // ===============================
-        if (!exp.completed) {
-            exp.status = "Failed";
-            failed++;
-            continue;
+        else if (!e.completed) {
+            e.status = "Failed";
         }
 
-        // ===============================
-        // LEFT = 0 → SUCCESS
-        // ===============================
-        if (exp.leftRows === 0) {
-            exp.status = "Success";
-            success++;
-            continue;
+        else if (e.leftRows === 0) {
+            e.status = "Success";
         }
 
-        // ===============================
-        // LEFT = -1 → SPECIAL CASE
-        // ===============================
-        if (exp.leftRows === -1) {
-
-            if (
-                exp.declaredRows > 0 &&
-                exp.receivedRows >= exp.declaredRows * 0.95
-            ) {
-                exp.status = "Success";
-                success++;
-            } else {
-                exp.status = "Warning";
-                warning++;
-            }
-
-            continue;
+        else if (e.leftRows === -1) {
+            e.status =
+                (e.declaredRows > 0 && e.receivedRows >= e.declaredRows * 0.95)
+                ? "Success"
+                : "Warning";
         }
 
-        // ===============================
-        // LEFT > 0 → FAILED (IMPORTANT RULE)
-        // ===============================
-        if (exp.leftRows > 0) {
-            exp.status = "Failed";
-            failed++;
-            continue;
+        else if (e.leftRows > 0) {
+            e.status = "Failed";
         }
 
-        // fallback
-        exp.status = "Warning";
-        warning++;
+        else {
+            e.status = "Warning";
+        }
+
+        if (e.status === "Success") success++;
+        if (e.status === "Warning") warning++;
+        if (e.status === "Failed") failed++;
     }
 
     return {
@@ -266,42 +218,31 @@ function analyzeExports(exports) {
 
 
 // ===============================
-// TABLE RENDERING
+// RENDER
 // ===============================
 
 function renderTable(data) {
 
     resultsBody.innerHTML = "";
 
-    if (!data.exports.length) {
-
-        resultsBody.innerHTML = `
-            <tr>
-                <td colspan="7" class="empty">
-                    No exports found
-                </td>
-            </tr>
-        `;
-
-        return;
-    }
-
-    for (const exp of data.exports) {
+    for (let e of data.exports) {
 
         const row = document.createElement("tr");
 
-        if (exp.status === "Success") row.classList.add("success-row");
-        if (exp.status === "Warning") row.classList.add("warning-row");
-        if (exp.status === "Failed") row.classList.add("failed-row");
+        row.classList.add(
+            e.status === "Success" ? "success-row" :
+            e.status === "Warning" ? "warning-row" :
+            "failed-row"
+        );
 
         row.innerHTML = `
-            <td>${exp.name}</td>
-            <td>${exp.table}</td>
-            <td>${exp.declaredRows}</td>
-            <td>${exp.receivedRows}</td>
-            <td>${exp.portions}</td>
-            <td>${exp.leftRows}</td>
-            <td><span class="badge ${exp.status.toLowerCase()}">${exp.status}</span></td>
+            <td>${e.name}</td>
+            <td>${e.table}</td>
+            <td>${e.declaredRows}</td>
+            <td>${e.receivedRows}</td>
+            <td>${e.portions}</td>
+            <td>${e.leftRows}</td>
+            <td>${e.status}</td>
         `;
 
         resultsBody.appendChild(row);
@@ -310,7 +251,7 @@ function renderTable(data) {
 
 
 // ===============================
-// SUMMARY UPDATE
+// SUMMARY
 // ===============================
 
 function updateSummary(data) {
