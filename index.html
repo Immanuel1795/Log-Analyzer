@@ -1,178 +1,113 @@
-document.getElementById('fileInput').addEventListener('change', function (event) {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServiceNow Log Analyzer</title>
 
-  const file = event.target.files[0];
-  if (!file) return;
+    <link rel="stylesheet" href="style.css">
 
-  const reader = new FileReader();
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
 
-  reader.onload = function (e) {
+<div class="container">
 
-    const lines = e.target.result.split(/\r?\n/);
+    <header>
+        <h1>📄 ServiceNow Log Analyzer</h1>
+        <p>Analyze ServiceNow Export Logs</p>
+    </header>
 
-    const requiredPhrases = [
-      'SNOW-FLOW service',
-      'SERVICE NOW QUERY SESSION BEGIN'
-    ];
+    <!-- Log Input -->
+    <section class="card">
 
-    const fileIsValid = requiredPhrases.every(phrase =>
-      lines.some(line => line.includes(phrase))
-    );
+        <h2>Paste Log</h2>
 
-    const resultBox = document.getElementById('resultBox');
-    const output = document.getElementById('output');
-    const detailsSection = document.getElementById('detailsSection');
-    const table = document.getElementById('detailsTable');
-    const exportDateSpan = document.getElementById('exportDate');
-    const sessionSummarySpan = document.getElementById('sessionSummary');
-    const tableBody = document.querySelector('#detailsTable tbody');
+        <textarea
+            id="logInput"
+            placeholder="Paste your ServiceNow export log here..."></textarea>
 
-    resultBox.classList.remove('success');
-    resultBox.style.display = 'block';
-    detailsSection.style.display = 'none';
-    table.style.display = 'none';
-    exportDateSpan.textContent = '';
-    sessionSummarySpan.textContent = '';
-    tableBody.innerHTML = '';
+        <div class="button-group">
 
-    if (!fileIsValid) {
-      output.textContent = '❌ Invalid file. Please upload a valid ServiceNow export log.';
-      return;
-    }
+            <button id="analyzeButton">
+                Analyze Log
+            </button>
 
-    const nameRegex = /\.\.\.NAME=([A-Z0-9_]+);\s*TABLE=([a-zA-Z0-9_]+);\s*DECLARED_ROWS=(\d+)/;
-    const portionRegex = /PORTION=\d+;\s*RECEIVED=\d+.*LEFT=(-?\d+)/;
-    const endRegex = /loading of ([A-Z0-9_]+) is done/i;
-    const dateRegex = /Date\s*:\s*(.+)/;
+            <button id="clearButton">
+                Clear
+            </button>
 
-    const sectionStates = {};
-    const details = [];
+        </div>
 
-    let currentSection = null;
-    let exportDate = '';
+    </section>
 
-    for (const raw of lines) {
+    <!-- Summary -->
+    <section class="summary">
 
-      const line = raw.trim();
+        <div class="summary-card total">
+            <h3>Total</h3>
+            <span id="totalExports">0</span>
+        </div>
 
-      const dateMatch = line.match(dateRegex);
-      if (dateMatch) {
-        exportDate = dateMatch[1];
-      }
+        <div class="summary-card success">
+            <h3>Success</h3>
+            <span id="successCount">0</span>
+        </div>
 
-      const nameMatch = line.match(nameRegex);
+        <div class="summary-card warning">
+            <h3>Warning</h3>
+            <span id="warningCount">0</span>
+        </div>
 
-      if (nameMatch) {
+        <div class="summary-card failed">
+            <h3>Failed</h3>
+            <span id="failedCount">0</span>
+        </div>
 
-        const name = nameMatch[1];
-        const table = nameMatch[2];
-        const declaredRows = nameMatch[3];
+    </section>
 
-        sectionStates[name] = {
-          started: true,
-          ended: false,
-          lastLeft: null
-        };
+    <!-- Results -->
 
-        currentSection = name;
+    <section class="card">
 
-        if (!details.some(d => d.name === name)) {
-          details.push({ name, table, declaredRows });
-        }
+        <h2>Analysis Results</h2>
 
-        continue;
-      }
+        <div id="results">
 
-      const portionMatch = line.match(portionRegex);
+            <table id="resultsTable">
 
-      if (portionMatch && currentSection) {
+                <thead>
 
-        const left = parseInt(portionMatch[1]);
-        sectionStates[currentSection].lastLeft = left;
+                <tr>
 
-        continue;
-      }
+                    <th>Export</th>
+                    <th>Table</th>
+                    <th>Declared</th>
+                    <th>Received</th>
+                    <th>Portions</th>
+                    <th>LEFT</th>
+                    <th>Status</th>
 
-      const endMatch = line.match(endRegex);
+                </tr>
 
-      if (endMatch) {
+                </thead>
 
-        const name = endMatch[1];
+                <tbody id="resultsBody">
 
-        if (sectionStates[name]) {
+                <!-- JavaScript inserts rows here -->
 
-          sectionStates[name].ended = true;
+                </tbody>
 
-          const left = sectionStates[name].lastLeft;
+            </table>
 
-          if (left !== null && left > 0) {
-            sectionStates[name].invalidEnding = true;
-          }
+        </div>
 
-        }
+    </section>
 
-        currentSection = null;
+</div>
 
-      }
+<script src="script.js"></script>
 
-    }
-
-    const problemSections = Object.entries(sectionStates)
-      .filter(([_, state]) => {
-
-        if (!state.started) return false;
-
-        if (state.ended && !state.invalidEnding) return false;
-
-        if (!state.ended && state.lastLeft === 0) return false;
-
-        return true;
-
-      })
-      .map(([name]) => name);
-
-    if (problemSections.length === 0) {
-
-      resultBox.classList.add('success');
-      output.textContent = '✅ All sections completed correctly!';
-
-    } else {
-
-      output.textContent =
-        `❌ Found ${problemSections.length} section(s) with issues:\n\n` +
-        problemSections.map(name => ` - ${name}`).join('\n');
-
-    }
-
-    if (exportDate) {
-      exportDateSpan.textContent = exportDate;
-    }
-
-    sessionSummarySpan.textContent = 'Session completed (no explicit end message in log).';
-
-    if (details.length > 0) {
-
-      detailsSection.style.display = 'block';
-      table.style.display = 'table';
-
-      details.forEach((row, index) => {
-
-        const tr = document.createElement('tr');
-
-        tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td>${row.name.toLowerCase()}</td>
-          <td>${row.table}</td>
-          <td>${row.declaredRows}</td>
-        `;
-
-        tableBody.appendChild(tr);
-
-      });
-
-    }
-
-  };
-
-  reader.readAsText(file);
-
-});
+</body>
+</html>
