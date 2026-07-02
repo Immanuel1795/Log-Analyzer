@@ -1,178 +1,409 @@
-document.getElementById('fileInput').addEventListener('change', function (event) {
+/* ===================================
+   Global Styles
+=================================== */
 
-  const file = event.target.files[0];
-  if (!file) return;
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
 
-  const reader = new FileReader();
+body{
+    font-family:'Inter',sans-serif;
+    background:#f4f7fb;
+    color:#333;
+    line-height:1.5;
+}
 
-  reader.onload = function (e) {
+.container{
+    width:95%;
+    max-width:1400px;
+    margin:30px auto;
+}
 
-    const lines = e.target.result.split(/\r?\n/);
+/* ===================================
+   Header
+=================================== */
 
-    const requiredPhrases = [
-      'SNOW-FLOW service',
-      'SERVICE NOW QUERY SESSION BEGIN'
-    ];
+header{
+    text-align:center;
+    margin-bottom:30px;
+}
 
-    const fileIsValid = requiredPhrases.every(phrase =>
-      lines.some(line => line.includes(phrase))
-    );
+header h1{
+    font-size:34px;
+    color:#1f2937;
+    margin-bottom:8px;
+}
 
-    const resultBox = document.getElementById('resultBox');
-    const output = document.getElementById('output');
-    const detailsSection = document.getElementById('detailsSection');
-    const table = document.getElementById('detailsTable');
-    const exportDateSpan = document.getElementById('exportDate');
-    const sessionSummarySpan = document.getElementById('sessionSummary');
-    const tableBody = document.querySelector('#detailsTable tbody');
+header p{
+    color:#6b7280;
+    font-size:16px;
+}
 
-    resultBox.classList.remove('success');
-    resultBox.style.display = 'block';
-    detailsSection.style.display = 'none';
-    table.style.display = 'none';
-    exportDateSpan.textContent = '';
-    sessionSummarySpan.textContent = '';
-    tableBody.innerHTML = '';
+/* ===================================
+   Cards
+=================================== */
 
-    if (!fileIsValid) {
-      output.textContent = '❌ Invalid file. Please upload a valid ServiceNow export log.';
-      return;
-    }
+.card{
+    background:#fff;
+    border-radius:12px;
+    padding:25px;
+    margin-bottom:25px;
+    box-shadow:0 5px 18px rgba(0,0,0,.08);
+}
 
-    const nameRegex = /\.\.\.NAME=([A-Z0-9_]+);\s*TABLE=([a-zA-Z0-9_]+);\s*DECLARED_ROWS=(\d+)/;
-    const portionRegex = /PORTION=\d+;\s*RECEIVED=\d+.*LEFT=(-?\d+)/;
-    const endRegex = /loading of ([A-Z0-9_]+) is done/i;
-    const dateRegex = /Date\s*:\s*(.+)/;
+.card h2{
+    margin-bottom:20px;
+    color:#1f2937;
+}
 
-    const sectionStates = {};
-    const details = [];
+/* ===================================
+   Textarea
+=================================== */
 
-    let currentSection = null;
-    let exportDate = '';
+textarea{
+    width:100%;
+    height:320px;
+    resize:vertical;
 
-    for (const raw of lines) {
+    border:1px solid #d1d5db;
+    border-radius:8px;
 
-      const line = raw.trim();
+    padding:15px;
 
-      const dateMatch = line.match(dateRegex);
-      if (dateMatch) {
-        exportDate = dateMatch[1];
-      }
+    font-size:14px;
+    font-family:Consolas,monospace;
 
-      const nameMatch = line.match(nameRegex);
+    outline:none;
 
-      if (nameMatch) {
+    transition:.3s;
+}
 
-        const name = nameMatch[1];
-        const table = nameMatch[2];
-        const declaredRows = nameMatch[3];
+textarea:focus{
 
-        sectionStates[name] = {
-          started: true,
-          ended: false,
-          lastLeft: null
-        };
+    border-color:#2563eb;
 
-        currentSection = name;
+    box-shadow:0 0 0 3px rgba(37,99,235,.15);
 
-        if (!details.some(d => d.name === name)) {
-          details.push({ name, table, declaredRows });
-        }
+}
 
-        continue;
-      }
+/* ===================================
+   Buttons
+=================================== */
 
-      const portionMatch = line.match(portionRegex);
+.button-group{
 
-      if (portionMatch && currentSection) {
+    margin-top:20px;
 
-        const left = parseInt(portionMatch[1]);
-        sectionStates[currentSection].lastLeft = left;
+    display:flex;
 
-        continue;
-      }
+    gap:15px;
 
-      const endMatch = line.match(endRegex);
+}
 
-      if (endMatch) {
+button{
 
-        const name = endMatch[1];
+    padding:12px 22px;
 
-        if (sectionStates[name]) {
+    border:none;
 
-          sectionStates[name].ended = true;
+    border-radius:8px;
 
-          const left = sectionStates[name].lastLeft;
+    cursor:pointer;
 
-          if (left !== null && left > 0) {
-            sectionStates[name].invalidEnding = true;
-          }
+    font-size:15px;
 
-        }
+    font-weight:600;
 
-        currentSection = null;
+    transition:.25s;
 
-      }
+}
 
-    }
+#analyzeButton{
 
-    const problemSections = Object.entries(sectionStates)
-      .filter(([_, state]) => {
+    background:#2563eb;
 
-        if (!state.started) return false;
+    color:white;
 
-        if (state.ended && !state.invalidEnding) return false;
+}
 
-        if (!state.ended && state.lastLeft === 0) return false;
+#analyzeButton:hover{
 
-        return true;
+    background:#1d4ed8;
 
-      })
-      .map(([name]) => name);
+}
 
-    if (problemSections.length === 0) {
+#clearButton{
 
-      resultBox.classList.add('success');
-      output.textContent = '✅ All sections completed correctly!';
+    background:#6b7280;
 
-    } else {
+    color:white;
 
-      output.textContent =
-        `❌ Found ${problemSections.length} section(s) with issues:\n\n` +
-        problemSections.map(name => ` - ${name}`).join('\n');
+}
 
-    }
+#clearButton:hover{
 
-    if (exportDate) {
-      exportDateSpan.textContent = exportDate;
-    }
+    background:#4b5563;
 
-    sessionSummarySpan.textContent = 'Session completed (no explicit end message in log).';
+}
 
-    if (details.length > 0) {
+/* ===================================
+   Dashboard
+=================================== */
 
-      detailsSection.style.display = 'block';
-      table.style.display = 'table';
+.summary{
 
-      details.forEach((row, index) => {
+    display:grid;
 
-        const tr = document.createElement('tr');
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
 
-        tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td>${row.name.toLowerCase()}</td>
-          <td>${row.table}</td>
-          <td>${row.declaredRows}</td>
-        `;
+    gap:20px;
 
-        tableBody.appendChild(tr);
+    margin-bottom:25px;
 
-      });
+}
 
-    }
+.summary-card{
 
-  };
+    background:white;
 
-  reader.readAsText(file);
+    padding:20px;
 
-});
+    border-radius:10px;
+
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+
+    text-align:center;
+
+}
+
+.summary-card h3{
+
+    margin-bottom:12px;
+
+    color:#374151;
+
+}
+
+.summary-card span{
+
+    font-size:34px;
+
+    font-weight:bold;
+
+}
+
+.total{
+
+    border-top:5px solid #3b82f6;
+
+}
+
+.success{
+
+    border-top:5px solid #10b981;
+
+}
+
+.warning{
+
+    border-top:5px solid #f59e0b;
+
+}
+
+.failed{
+
+    border-top:5px solid #ef4444;
+
+}
+
+/* ===================================
+   Table
+=================================== */
+
+#results{
+
+    overflow-x:auto;
+
+}
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    margin-top:10px;
+
+}
+
+thead{
+
+    background:#1f2937;
+
+    color:white;
+
+}
+
+th{
+
+    padding:14px;
+
+    text-align:left;
+
+}
+
+td{
+
+    padding:14px;
+
+    border-bottom:1px solid #e5e7eb;
+
+}
+
+tbody tr:hover{
+
+    background:#f9fafb;
+
+}
+
+/* ===================================
+   Status Row Colors
+=================================== */
+
+.success-row{
+
+    background:#ecfdf5;
+
+}
+
+.warning-row{
+
+    background:#fffbeb;
+
+}
+
+.failed-row{
+
+    background:#fef2f2;
+
+}
+
+/* ===================================
+   Status Badge
+=================================== */
+
+.badge{
+
+    display:inline-block;
+
+    padding:6px 12px;
+
+    border-radius:30px;
+
+    color:white;
+
+    font-size:13px;
+
+    font-weight:600;
+
+}
+
+.badge.success{
+
+    background:#10b981;
+
+}
+
+.badge.warning{
+
+    background:#f59e0b;
+
+}
+
+.badge.failed{
+
+    background:#ef4444;
+
+}
+
+/* ===================================
+   Empty Results
+=================================== */
+
+.empty{
+
+    text-align:center;
+
+    color:#6b7280;
+
+    padding:30px;
+
+}
+
+/* ===================================
+   Footer
+=================================== */
+
+footer{
+
+    margin-top:40px;
+
+    text-align:center;
+
+    color:#6b7280;
+
+    font-size:14px;
+
+}
+
+/* ===================================
+   Responsive
+=================================== */
+
+@media(max-width:768px){
+
+.summary{
+
+    grid-template-columns:1fr;
+
+}
+
+.button-group{
+
+    flex-direction:column;
+
+}
+
+button{
+
+    width:100%;
+
+}
+
+header h1{
+
+    font-size:28px;
+
+}
+
+textarea{
+
+    height:250px;
+
+}
+
+table{
+
+    font-size:13px;
+
+}
+
+th,td{
+
+    padding:10px;
+
+}
+
+}
