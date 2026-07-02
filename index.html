@@ -1,24 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>ServiceNow Log Analyzer</title>
 
     <link rel="stylesheet" href="style.css">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
 </head>
 
 <body>
 
 <div class="container">
 
+    <!-- ===========================
+         HEADER
+    ============================ -->
+
     <header>
+
         <h1>📊 ServiceNow Log Analyzer</h1>
-        <p>Analyze ServiceNow Export Logs Automatically</p>
+
+        <p>
+            Analyze ServiceNow Export Logs Automatically
+        </p>
+
     </header>
 
-    <!-- UPLOAD -->
+
+
+    <!-- ===========================
+         FILE UPLOAD
+    ============================ -->
+
     <section class="card">
 
         <h2>Upload Log File</h2>
@@ -26,83 +46,178 @@
         <div class="upload-section">
 
             <label class="upload-label">
+
                 Select ServiceNow Log (.log / .txt)
+
             </label>
 
-            <input type="file" id="logFile" accept=".log,.txt">
+            <input
+                type="file"
+                id="logFile"
+                accept=".log,.txt"
+            >
 
-            <p id="selectedFile">No file selected</p>
+            <p id="selectedFile">
+
+                No file selected
+
+            </p>
 
         </div>
+
 
         <div class="button-group">
 
-            <button id="analyzeButton" disabled>Analyze Log</button>
-            <button id="clearButton">Clear</button>
+            <button id="analyzeButton" disabled>
+
+                Analyze Log
+
+            </button>
+
+            <button id="clearButton">
+
+                Clear
+
+            </button>
 
         </div>
 
     </section>
 
-    <!-- SUMMARY -->
+
+
+    <!-- ===========================
+         SUMMARY
+    ============================ -->
+
     <section class="summary">
 
         <div class="summary-card total">
-            <h3>Total</h3>
+
+            <h3>Total Exports</h3>
+
             <span id="totalExports">0</span>
+
         </div>
 
         <div class="summary-card success">
+
             <h3>Success</h3>
+
             <span id="successCount">0</span>
+
         </div>
 
         <div class="summary-card warning">
+
             <h3>Warning</h3>
+
             <span id="warningCount">0</span>
+
         </div>
 
         <div class="summary-card failed">
+
             <h3>Failed</h3>
+
             <span id="failedCount">0</span>
+
         </div>
 
     </section>
 
-    <!-- TABLE -->
+
+
+    <!-- ===========================
+         RESULTS
+    ============================ -->
+
     <section class="card">
 
-        <h2>Results</h2>
+        <h2>Analysis Results</h2>
 
-        <table>
 
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Table</th>
-                    <th>Declared</th>
-                    <th>Received</th>
-                    <th>Portions</th>
-                    <th>Left</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
+        <!-- Search Box -->
 
-            <tbody id="resultsBody">
-                <tr>
-                    <td colspan="7" class="empty">
-                        Upload a file to start analysis
-                    </td>
-                </tr>
-            </tbody>
+        <div class="table-toolbar">
 
-        </table>
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="🔍 Search by Export Name or Table..."
+            >
+
+        </div>
+
+
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Export Name</th>
+
+                        <th>Table</th>
+
+                        <th>Declared Rows</th>
+
+                        <th>Received Rows</th>
+
+                        <th>Portions</th>
+
+                        <th>Left</th>
+
+                        <th>Status</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="resultsBody">
+
+                    <tr>
+
+                        <td colspan="7" class="empty">
+
+                            Upload a ServiceNow log file and click
+                            <strong>Analyze Log</strong>
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
 
     </section>
+
+
+
+    <!-- ===========================
+         FOOTER
+    ============================ -->
+
+    <footer>
+
+        <p>
+
+            ServiceNow Log Analyzer • Version 1.0
+
+        </p>
+
+    </footer>
 
 </div>
 
 <script src="script.js"></script>
 
 </body>
+
 </html>
