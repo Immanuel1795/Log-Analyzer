@@ -1,126 +1,268 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+/* ===============================
+   BASE RESET
+=============================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-body{
-    font-family:Inter,sans-serif;
-    background:#f4f7fb;
-    color:#333;
+body {
+    font-family: "Inter", sans-serif;
+    background: #f4f7fb;
+    color: #333;
+    line-height: 1.5;
 }
 
-.container{
-    max-width:1200px;
-    margin:30px auto;
-    width:95%;
+/* ===============================
+   LAYOUT
+=============================== */
+
+.container {
+    max-width: 1200px;
+    margin: 30px auto;
+    width: 95%;
 }
 
-header{
-    text-align:center;
-    margin-bottom:20px;
+/* ===============================
+   HEADER
+=============================== */
+
+header {
+    text-align: center;
+    margin-bottom: 20px;
 }
 
-header h1{
-    font-size:30px;
+header h1 {
+    font-size: 30px;
+    font-weight: 700;
 }
 
-.card{
-    background:white;
-    padding:20px;
-    border-radius:10px;
-    margin-bottom:20px;
-    box-shadow:0 2px 10px rgba(0,0,0,0.08);
+header p {
+    color: #666;
+    margin-top: 5px;
 }
 
-/* Upload */
-.upload-section{
-    margin-top:10px;
+/* ===============================
+   CARDS
+=============================== */
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
 }
 
-#logFile{
-    padding:10px;
-    border:2px dashed #2563eb;
-    width:100%;
-    cursor:pointer;
+.card h2 {
+    margin-bottom: 15px;
 }
 
-#selectedFile{
-    margin-top:10px;
-    color:#666;
+/* ===============================
+   UPLOAD SECTION
+=============================== */
+
+.upload-section {
+    margin-top: 10px;
 }
 
-/* Buttons */
-.button-group{
-    margin-top:15px;
-    display:flex;
-    gap:10px;
+#logFile {
+    padding: 12px;
+    border: 2px dashed #2563eb;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 8px;
+    background: #f9fafb;
 }
 
-button{
-    padding:10px 15px;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
+#selectedFile {
+    margin-top: 10px;
+    color: #666;
 }
 
-#analyzeButton{
-    background:#2563eb;
-    color:white;
+/* ===============================
+   BUTTONS
+=============================== */
+
+.button-group {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
 }
 
-#clearButton{
-    background:#6b7280;
-    color:white;
+button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: 0.2s;
 }
 
-button:disabled{
-    background:#9ca3af;
-    cursor:not-allowed;
+#analyzeButton {
+    background: #2563eb;
+    color: white;
 }
 
-/* Summary */
-.summary{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:10px;
-    margin-bottom:20px;
+#analyzeButton:hover {
+    background: #1d4ed8;
 }
 
-.summary-card{
-    background:white;
-    padding:15px;
-    text-align:center;
-    border-radius:8px;
+#clearButton {
+    background: #6b7280;
+    color: white;
 }
 
-.summary-card span{
-    font-size:24px;
-    font-weight:bold;
+#clearButton:hover {
+    background: #4b5563;
 }
 
-.success{border-top:4px solid #10b981;}
-.warning{border-top:4px solid #f59e0b;}
-.failed{border-top:4px solid #ef4444;}
-.total{border-top:4px solid #3b82f6;}
-
-/* Table */
-table{
-    width:100%;
-    border-collapse:collapse;
+button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
 }
 
-th,td{
-    padding:10px;
-    border-bottom:1px solid #ddd;
-    text-align:left;
+/* ===============================
+   SUMMARY DASHBOARD
+=============================== */
+
+.summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
 }
 
-.success-row{background:#ecfdf5;}
-.warning-row{background:#fffbeb;}
-.failed-row{background:#fef2f2;}
+.summary-card {
+    background: white;
+    padding: 15px;
+    text-align: center;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
 
-.empty{
-    text-align:center;
-    color:#777;
+.summary-card h3 {
+    font-size: 14px;
+    color: #666;
+}
+
+.summary-card span {
+    font-size: 24px;
+    font-weight: bold;
+    display: block;
+    margin-top: 5px;
+}
+
+/* Colors */
+.success { border-top: 4px solid #10b981; }
+.warning { border-top: 4px solid #f59e0b; }
+.failed  { border-top: 4px solid #ef4444; }
+.total   { border-top: 4px solid #3b82f6; }
+
+/* ===============================
+   SEARCH BAR
+=============================== */
+
+.table-toolbar {
+    margin-bottom: 15px;
+}
+
+#searchInput {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    transition: 0.2s;
+    background: #fff;
+}
+
+#searchInput:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 5px rgba(37,99,235,0.3);
+}
+
+/* ===============================
+   TABLE
+=============================== */
+
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    font-size: 14px;
+}
+
+th {
+    background: #f9fafb;
+    font-weight: 600;
+}
+
+/* ===============================
+   ROW STATUS COLORS
+=============================== */
+
+.success-row {
+    background: #ecfdf5;
+}
+
+.warning-row {
+    background: #fffbeb;
+}
+
+.failed-row {
+    background: #fef2f2;
+}
+
+/* ===============================
+   EMPTY STATE
+=============================== */
+
+.empty {
+    text-align: center;
+    color: #777;
+    padding: 20px;
+}
+
+/* ===============================
+   FOOTER
+=============================== */
+
+footer {
+    text-align: center;
+    margin-top: 20px;
+    color: #888;
+    font-size: 13px;
+}
+
+/* ===============================
+   RESPONSIVE
+=============================== */
+
+@media (max-width: 768px) {
+
+    .summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    header h1 {
+        font-size: 22px;
+    }
+
+    table {
+        min-width: 700px;
+    }
 }
