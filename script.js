@@ -47,7 +47,7 @@ clearButton.addEventListener("click", function () {
 
 
 // ===============================
-// PARSER
+// PARSER (UPDATED FOR ALL LOG TYPES)
 // ===============================
 
 function parseLog(logText) {
@@ -58,9 +58,22 @@ function parseLog(logText) {
 
     let currentExport = null;
 
-    for (let line of lines) {
+    for (let rawLine of lines) {
 
-        // Detect export section
+        // ===============================
+        // REMOVE TIMESTAMP (NEW FIX)
+        // ===============================
+        let line = rawLine.replace(/^\d{4}-\d{2}-\d{2}T.*?\s+/, "");
+
+        // ===============================
+        // IGNORE NOISE LINES
+        // ===============================
+        if (line.includes("uploading Blob")) continue;
+        if (line.includes("uploading done")) continue;
+
+        // ===============================
+        // DETECT EXPORT START
+        // ===============================
         if (line.includes("---------------------------")) {
 
             const match = line.match(/---------------------------\s+(.+?)\s+\(/);
@@ -84,7 +97,9 @@ function parseLog(logText) {
 
         if (!currentExport) continue;
 
-        // TABLE + DECLARED
+        // ===============================
+        // TABLE + DECLARED ROWS
+        // ===============================
         if (line.includes("TABLE=")) {
 
             const tableMatch = line.match(/TABLE=([^;]+)/);
@@ -94,7 +109,9 @@ function parseLog(logText) {
             if (declaredMatch) currentExport.declaredRows = parseInt(declaredMatch[1]);
         }
 
+        // ===============================
         // PORTION DATA
+        // ===============================
         if (line.includes("PORTION=")) {
 
             const portionMatch = line.match(/PORTION=(\d+)/);
@@ -109,7 +126,9 @@ function parseLog(logText) {
             if (leftMatch) currentExport.leftRows = parseInt(leftMatch[1]);
         }
 
-        // COMPLETION FLAG
+        // ===============================
+        // COMPLETION DETECTION
+        // ===============================
         if (line.includes("loading of") && line.includes("is done")) {
             currentExport.completed = true;
         }
@@ -132,7 +151,7 @@ function analyzeExports(exports) {
     for (const exp of exports) {
 
         // ===============================
-        // SPECIAL CASE: SERVICE_COMMITMENT
+        // SERVICE_COMMITMENT SPECIAL CASE
         // ===============================
         if (exp.name && exp.name.includes("SERVICE_COMMITMENT")) {
 
@@ -185,7 +204,7 @@ function analyzeExports(exports) {
         }
 
         // ===============================
-        // LEFT > 0 → FAILED (NEW RULE)
+        // LEFT > 0 → FAILED
         // ===============================
         if (exp.leftRows > 0) {
             exp.status = "Failed";
