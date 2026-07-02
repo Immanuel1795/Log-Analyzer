@@ -16,7 +16,7 @@ const failedCountEl = document.getElementById("failedCount");
 
 
 // ===============================
-// EVENT LISTENERS
+// EVENTS
 // ===============================
 
 analyzeButton.addEventListener("click", function () {
@@ -30,7 +30,6 @@ analyzeButton.addEventListener("click", function () {
     renderTable(analyzed);
 
     updateSummary(analyzed);
-
 });
 
 
@@ -44,7 +43,6 @@ clearButton.addEventListener("click", function () {
     successCountEl.textContent = "0";
     warningCountEl.textContent = "0";
     failedCountEl.textContent = "0";
-
 });
 
 
@@ -96,7 +94,7 @@ function parseLog(logText) {
             if (declaredMatch) currentExport.declaredRows = parseInt(declaredMatch[1]);
         }
 
-        // PORTION data
+        // PORTION DATA
         if (line.includes("PORTION=")) {
 
             const portionMatch = line.match(/PORTION=(\d+)/);
@@ -111,7 +109,7 @@ function parseLog(logText) {
             if (leftMatch) currentExport.leftRows = parseInt(leftMatch[1]);
         }
 
-        // Completion detection
+        // COMPLETION FLAG
         if (line.includes("loading of") && line.includes("is done")) {
             currentExport.completed = true;
         }
@@ -122,7 +120,7 @@ function parseLog(logText) {
 
 
 // ===============================
-// ANALYSIS ENGINE (FINAL FIXED)
+// ANALYSIS ENGINE (FINAL RULES)
 // ===============================
 
 function analyzeExports(exports) {
@@ -150,21 +148,26 @@ function analyzeExports(exports) {
         }
 
         // ===============================
-        // NORMAL EXPORTS
+        // NOT COMPLETED → FAILED
         // ===============================
-
         if (!exp.completed) {
             exp.status = "Failed";
             failed++;
             continue;
         }
 
+        // ===============================
+        // LEFT = 0 → SUCCESS
+        // ===============================
         if (exp.leftRows === 0) {
             exp.status = "Success";
             success++;
             continue;
         }
 
+        // ===============================
+        // LEFT = -1 → SPECIAL CASE
+        // ===============================
         if (exp.leftRows === -1) {
 
             if (
@@ -181,9 +184,12 @@ function analyzeExports(exports) {
             continue;
         }
 
+        // ===============================
+        // LEFT > 0 → FAILED (NEW RULE)
+        // ===============================
         if (exp.leftRows > 0) {
-            exp.status = "Warning";
-            warning++;
+            exp.status = "Failed";
+            failed++;
             continue;
         }
 
@@ -245,7 +251,7 @@ function renderTable(data) {
 
 
 // ===============================
-// SUMMARY
+// SUMMARY UPDATE
 // ===============================
 
 function updateSummary(data) {
