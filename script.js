@@ -1,5 +1,5 @@
 // ===============================
-// ServiceNow Log Analyzer
+// ServiceNow Log Analyzer (FINAL)
 // ===============================
 
 // DOM Elements
@@ -49,7 +49,7 @@ clearButton.addEventListener("click", function () {
 
 
 // ===============================
-// MAIN PARSER
+// PARSER
 // ===============================
 
 function parseLog(logText) {
@@ -60,11 +60,9 @@ function parseLog(logText) {
 
     let currentExport = null;
 
-    for (let i = 0; i < lines.length; i++) {
+    for (let line of lines) {
 
-        const line = lines[i];
-
-        // Detect new export section
+        // Detect export section
         if (line.includes("---------------------------")) {
 
             const match = line.match(/---------------------------\s+(.+?)\s+\(/);
@@ -72,7 +70,6 @@ function parseLog(logText) {
             if (match) {
 
                 currentExport = {
-
                     name: match[1],
                     table: "",
                     declaredRows: 0,
@@ -81,28 +78,26 @@ function parseLog(logText) {
                     leftRows: null,
                     completed: false,
                     status: "Unknown"
-
                 };
 
                 exports.push(currentExport);
-
             }
-
         }
 
-        // Metadata line
-        if (currentExport && line.includes("TABLE=")) {
+        if (!currentExport) continue;
+
+        // TABLE + DECLARED
+        if (line.includes("TABLE=")) {
 
             const tableMatch = line.match(/TABLE=([^;]+)/);
             if (tableMatch) currentExport.table = tableMatch[1];
 
             const declaredMatch = line.match(/DECLARED_ROWS=(\d+)/);
             if (declaredMatch) currentExport.declaredRows = parseInt(declaredMatch[1]);
-
         }
 
-        // Portion progress
-        if (currentExport && line.includes("PORTION=")) {
+        // PORTION data
+        if (line.includes("PORTION=")) {
 
             const portionMatch = line.match(/PORTION=(\d+)/);
             if (portionMatch) currentExport.portions = parseInt(portionMatch[1]);
@@ -114,16 +109,11 @@ function parseLog(logText) {
 
             const leftMatch = line.match(/LEFT=(-?\d+)/);
             if (leftMatch) currentExport.leftRows = parseInt(leftMatch[1]);
-
         }
 
         // Completion detection
-        if (currentExport &&
-            line.includes("loading of") &&
-            line.includes("is done")) {
-
+        if (line.includes("loading of") && line.includes("is done")) {
             currentExport.completed = true;
-
         }
     }
 
@@ -132,7 +122,7 @@ function parseLog(logText) {
 
 
 // ===============================
-// ANALYSIS ENGINE
+// ANALYSIS ENGINE (FINAL FIXED)
 // ===============================
 
 function analyzeExports(exports) {
@@ -143,35 +133,63 @@ function analyzeExports(exports) {
 
     for (const exp of exports) {
 
-        // Success condition
-        if (
-            exp.completed &&
-            (exp.leftRows === 0 || exp.leftRows === -1)
-        ) {
-            exp.status = "Success";
-            success++;
+        // ===============================
+        // SPECIAL CASE: SERVICE_COMMITMENT
+        // ===============================
+        if (exp.name && exp.name.includes("SERVICE_COMMITMENT")) {
+
+            if (exp.leftRows === 0) {
+                exp.status = "Success";
+                success++;
+            } else {
+                exp.status = "Warning";
+                warning++;
+            }
+
+            continue;
         }
 
-        // Failed condition
-        else if (!exp.completed) {
+        // ===============================
+        // NORMAL EXPORTS
+        // ===============================
+
+        if (!exp.completed) {
             exp.status = "Failed";
             failed++;
+            continue;
         }
 
-        // Warning
-        else {
+        if (exp.leftRows === 0) {
+            exp.status = "Success";
+            success++;
+            continue;
+        }
+
+        if (exp.leftRows === -1) {
+
+            if (
+                exp.declaredRows > 0 &&
+                exp.receivedRows >= exp.declaredRows * 0.95
+            ) {
+                exp.status = "Success";
+                success++;
+            } else {
+                exp.status = "Warning";
+                warning++;
+            }
+
+            continue;
+        }
+
+        if (exp.leftRows > 0) {
             exp.status = "Warning";
             warning++;
+            continue;
         }
 
-        // Extra safety check (data mismatch)
-        if (
-            exp.completed &&
-            exp.declaredRows > 0 &&
-            exp.receivedRows < exp.declaredRows
-        ) {
-            exp.status = "Warning";
-        }
+        // fallback
+        exp.status = "Warning";
+        warning++;
     }
 
     return {
@@ -192,22 +210,18 @@ function analyzeExports(exports) {
 
 function renderTable(data) {
 
-    const exports = data.exports;
-
     resultsBody.innerHTML = "";
 
-    if (exports.length === 0) {
-
+    if (!data.exports.length) {
         resultsBody.innerHTML = `
             <tr>
                 <td colspan="7" class="empty">No exports found</td>
             </tr>
         `;
-
         return;
     }
 
-    for (const exp of exports) {
+    for (let exp of data.exports) {
 
         const row = document.createElement("tr");
 
@@ -231,7 +245,7 @@ function renderTable(data) {
 
 
 // ===============================
-// SUMMARY UPDATE
+// SUMMARY
 // ===============================
 
 function updateSummary(data) {
@@ -240,5 +254,4 @@ function updateSummary(data) {
     successCountEl.textContent = data.summary.success;
     warningCountEl.textContent = data.summary.warning;
     failedCountEl.textContent = data.summary.failed;
-
 }
