@@ -9,24 +9,48 @@
 
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
 </head>
 <body>
 
 <div class="container">
 
+    <!-- ==========================
+         HEADER
+    =========================== -->
     <header>
-        <h1>📄 ServiceNow Log Analyzer</h1>
-        <p>Analyze ServiceNow Export Logs</p>
+        <h1>📊 ServiceNow Log Analyzer</h1>
+        <p>Analyze ServiceNow Export Logs Automatically</p>
     </header>
 
-    <!-- Log Input -->
+
+    <!-- ==========================
+         FILE UPLOAD
+    =========================== -->
+
     <section class="card">
 
-        <h2>Paste Log</h2>
+        <h2>Upload Log File</h2>
 
-        <textarea
-            id="logInput"
-            placeholder="Paste your ServiceNow export log here..."></textarea>
+        <div class="upload-section">
+
+            <label for="logFile" class="upload-label">
+
+                Select ServiceNow Log (.log / .txt)
+
+            </label>
+
+            <input
+                type="file"
+                id="logFile"
+                accept=".log,.txt"
+            >
+
+            <p id="selectedFile">
+                No file selected
+            </p>
+
+        </div>
 
         <div class="button-group">
 
@@ -42,11 +66,15 @@
 
     </section>
 
-    <!-- Summary -->
+
+    <!-- ==========================
+         SUMMARY
+    =========================== -->
+
     <section class="summary">
 
         <div class="summary-card total">
-            <h3>Total</h3>
+            <h3>Total Exports</h3>
             <span id="totalExports">0</span>
         </div>
 
@@ -67,7 +95,10 @@
 
     </section>
 
-    <!-- Results -->
+
+    <!-- ==========================
+         RESULTS TABLE
+    =========================== -->
 
     <section class="card">
 
@@ -75,27 +106,41 @@
 
         <div id="results">
 
-            <table id="resultsTable">
+            <table>
 
                 <thead>
 
-                <tr>
+                    <tr>
 
-                    <th>Export</th>
-                    <th>Table</th>
-                    <th>Declared</th>
-                    <th>Received</th>
-                    <th>Portions</th>
-                    <th>LEFT</th>
-                    <th>Status</th>
+                        <th>Export Name</th>
 
-                </tr>
+                        <th>Table</th>
+
+                        <th>Declared Rows</th>
+
+                        <th>Received Rows</th>
+
+                        <th>Portions</th>
+
+                        <th>Left</th>
+
+                        <th>Status</th>
+
+                    </tr>
 
                 </thead>
 
                 <tbody id="resultsBody">
 
-                <!-- JavaScript inserts rows here -->
+                    <tr>
+
+                        <td colspan="7" class="empty">
+
+                            Upload a log file and click Analyze.
+
+                        </td>
+
+                    </tr>
 
                 </tbody>
 
@@ -104,6 +149,21 @@
         </div>
 
     </section>
+
+
+    <!-- ==========================
+         FOOTER
+    =========================== -->
+
+    <footer>
+
+        <p>
+
+            ServiceNow Log Analyzer • Version 1.0
+
+        </p>
+
+    </footer>
 
 </div>
 
